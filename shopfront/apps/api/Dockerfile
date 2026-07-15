@@ -1,34 +1,37 @@
+# ==========================================
+# Stage 1: Builder
+# ==========================================
 FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Install dependencies into a dedicated target directory
+# This eliminates broken symlinks and bypasses /root permission restrictions
+RUN pip install --no-cache-dir --target=/app/pkgs -r requirements.txt
 
-# Stage - 2
-
+# ==========================================
+# Stage 2: Runtime
+# ==========================================
 FROM gcr.io/distroless/python3-debian12:latest AS runtime
 
 WORKDIR /app
 
-COPY --from=builder /usr/lib/aarch64-linux-gnu/libpq.so* /usr/lib/aarch64-linux-gnu/ 2>/dev/null || \
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libpq.so* /usr/lib/x86_64-linux-gnu/
+# Copy compiled dependencies and explicitly grant ownership to user 65532
+COPY --from=builder --chown=65532:65532 /app/pkgs /app/pkgs
 
-COPY --from=builder /root/.local /root/.local
-COPY app.py .
+# Copy application code with proper ownership
+COPY --chown=65532:65532 app.py .
 
-ENV PATH=/root/.local/bin:$PATH
-ENV PYTHONPATH=/root/.local/lib/python3.11/site-packages
+# Tell Python where to find the copied third-party packages
+ENV PYTHONPATH=/app/pkgs
 ENV PYTHONUNBUFFERED=1
 
+# Run as Google Distroless's built-in non-root security user
 USER 65532
 
 EXPOSE 8000
 
+# Execute using Distroless's native Python interpreter
 ENTRYPOINT [ "/usr/bin/python3", "/app/app.py" ]
