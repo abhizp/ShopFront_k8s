@@ -7,9 +7,11 @@ app = FastAPI(title="Shopfront Web Frontend")
 # Looks for the API on the internal network, defaults to localhost for testing
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
+
 @app.get("/healthz")
 def healthz():
     return {"status": "frontend-operational"}
+
 
 @app.get("/")
 def home_page(q: str = "waterproof jacket"):

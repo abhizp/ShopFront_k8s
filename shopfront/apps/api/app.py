@@ -22,6 +22,7 @@ DB_NAME = os.getenv("DB_NAME", "shopfront")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "changeme")
 
+
 def get_db_connection():
     if not HAS_POSTGRES_DRIVER:
         raise ConnectionError("PostgreSQL driver is not loaded.")
@@ -34,9 +35,11 @@ def get_db_connection():
         connect_timeout=3
     )
 
+
 @app.get("/healthz")
 def healthz():
     return {"status": "alive"}
+
 
 @app.get("/readyz")
 def readyz(response: Response):
@@ -53,6 +56,7 @@ def readyz(response: Response):
         logger.error(f"Database readiness check failed: {e}")
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "unready", "reason": "database unavailable"}
+
 
 @app.get("/api/v1/search")
 def search_products(q: str = ""):
@@ -82,6 +86,7 @@ def search_products(q: str = ""):
         "engine": engine_name,
         "products": products
     }
+
 
 if __name__ == "__main__":
     import uvicorn

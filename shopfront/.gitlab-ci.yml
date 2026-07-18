@@ -1,0 +1,58 @@
+#image: my-custom-image
+
+stages:
+  - test
+  - build
+  - push-to-gcp
+
+variables:
+  GCP_PROJECT_ID: gke-demo-502311
+  GCP_SA_EMAIL: gitlab-auth-project@gke-demo-502311.iam.gserviceaccount.com
+  GCP_WORKLOAD_IDENTITY_PROVIDER: projects/9275060890/locations/global/workloadIdentityPools/gitlab-pool/providers/gitlab-provider
+
+
+default:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: "https://gitlab.com"
+
+  before_script:
+    - echo "Exchanging GitLab OIDC token for temporary GCP Service Account credentials..."
+    - echo "${GITLAB_OIDC_TOKEN}" > .gitlab_oidc_token
+    - gcloud iam workload-identity-pools create-cred-config "${GCP_WORKLOAD_IDENTITY_PROVIDER}"
+      --service-account="${GCP_SA_EMAIL}"
+      --output-file=.gcp_temp_cred.json
+      --credential-source-file=.gitlab_oidc_token
+    - gcloud auth login --cred-file=.gcp_temp_cred.json
+    - echo "${GITLAB_OIDC_TOKEN}"
+    - cat .gcp_temp_cred.json
+    - echo "Successfully authenticated!"
+    - gcloud config set project "${GCP_PROJECT_ID}"
+    - gcloud auth list
+
+.app_testing:
+  stage: test
+  before_script: 
+    - pip install --no-cache-dir -r ${REQUIREMENT_FILE} pytest httpx flake8
+  script:
+    - echo "Running code linter for ${APP_NAME}"
+    - python -m flake8 ${APP_FILE} ${TEST_FILE} --max-line-length=120
+    - echo "Running unit tests for ${APP_NAME} ..."
+    - python -m pytest ${TEST_FILE} -v
+
+testing-api-code:
+  extends: .app_testing
+  variables:
+    REQUIREMENT_FILE: apps/api/requirements.txt
+    APP_NAME: api_app
+    APP_FILE: apps/api/app.py
+    TEST_FILE: validations/python-code-test/api_test.py
+
+testing-web-code:
+  extends: .app_testing
+  variables:
+    REQUIREMENT_FILE: apps/web/requirements.txt
+    APP_NAME: web_app
+    APP_FILE: apps/web/app.py
+    TEST_FILE: validations/python-code-test/web_test.py
+
