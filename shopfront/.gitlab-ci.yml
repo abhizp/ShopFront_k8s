@@ -3,10 +3,11 @@
 stages:
   - test
   - build
-  - push-to-gcp
 
 variables:
   GCP_PROJECT_ID: gke-demo-502311
+  GCP_REGION: asia-south1          # Updated to Mumbai location
+  GAR_REPO: shop-front-repo
   GCP_SA_EMAIL: gitlab-auth-project@gke-demo-502311.iam.gserviceaccount.com
   GCP_WORKLOAD_IDENTITY_PROVIDER: projects/9275060890/locations/global/workloadIdentityPools/gitlab-pool/providers/gitlab-provider
 
@@ -56,3 +57,38 @@ testing-web-code:
     APP_FILE: apps/web/app.py
     TEST_FILE: validations/python-code-test/web_test.py
 
+.app-build:
+  stage: build
+  image: google/cloud-sdk:slim
+  services:
+  # Starting the docker daemon in background
+    - docker:24.0.5-dind
+  script:
+    - gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev --quiet
+    - echo "Containarizing the ${APP_NAME}-application... "
+    - cd ${APP_DIR}
+
+    - docker build -t ${GAR_IMAGE_PATH}:${CI_COMMIT_SHORT_SHA} -t ${GAR_IMAGE_PATH}:latest .
+
+    - echo "Pushing ${APP_NAME}-application directly GCP Artifact registry... "
+    - docker push ${GAR_IMAGE_PATH}:${CI_COMMIT_SHORT_SHA}
+    - docker push ${GAR_IMAGE_PATH}:latest
+    - echo "Successfully published ${GAR_IMAGE_PATH} to GCP Artifact Registry.. !! "
+
+api-app-build:
+  extends: .app-build
+  variables:
+    APP_NAME: api
+    APP_DIR: apps/api
+    GAR_IMAGE_PATH: "${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GAR_REPO}/api"
+  needs:
+    - testing-api-code
+
+web-app-build:
+  extends: .app-build
+  variables:
+    APP_NAME: web
+    APP_DIR: apps/web
+    GAR_IMAGE_PATH: "${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GAR_REPO}/web"
+  needs:
+    - testing-web-code
