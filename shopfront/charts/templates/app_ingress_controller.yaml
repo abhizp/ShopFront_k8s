@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shopfront-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    networking.gke.io/managed-certifications: "shopfront-managed-cert"
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  rules:
+    - host: ""
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: shopfront-web-service
+                port:
+                  number: 80

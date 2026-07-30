@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-from-Ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: shopfront-web
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 5000
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-from-web
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: shopfront-api
+  from:
+    podSelector:
+      matchLabels:
+        app: shopfront-web
+    ports:
+      - protocol: TCP
+        port: 8000

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: shopfront-api-service
+  labels:
+    app: shopfront-api
+spec:
+  selector:
+    app: shopfront-api
+  type: CluserIP
+  ports:
+    - port: 8080
+      targetPort: 8000
+      protocol: TCP
+      name: http

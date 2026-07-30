@@ -92,3 +92,4 @@ web-app-build:
     GAR_IMAGE_PATH: "${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GAR_REPO}/web"
   needs:
     - testing-web-code
+

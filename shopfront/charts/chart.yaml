@@ -1,0 +1,13 @@
+apiVersion: v2
+name: shop-front
+description: This a k8s personal project built for demonstration of Kubernetes knowledge
+type: application
+
+version: 0.1.0
+
+appVersion: 0.1.0
+
+maintainers:
+  - name: Abhishek
+    email: abhishekmalipatil619@gmail.com
+  
